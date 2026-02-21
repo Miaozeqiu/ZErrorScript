@@ -1,0 +1,23 @@
+{
+  "name": "bilibili-tampermonkey-vue",
+  "version": "1.0.0",
+  "description": "基于Vue的Bilibili油猴脚本开发环境",
+  "type": "module",
+  "scripts": {
+    "dev": "node dev-server.js",
+    "build": "vite build",
+    "build:watch": "vite build --watch",
+    "preview": "vite preview",
+    "install-deps": "npm install",
+    "repack": "python repack.py",
+    "build:pack": "npm run build && python repack.py"
+  },
+  "dependencies": {
+    "vue": "^3.3.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.5.0",
+    "rollup-plugin-userscript-metablock": "^0.3.3",
+    "vite": "^5.0.0"
+  }
+}

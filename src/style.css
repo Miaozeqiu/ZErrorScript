@@ -1,0 +1,577 @@
+#zerror-window-root {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 999999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.zerror-window {
+  box-sizing: border-box;
+  width: 300px;
+  border-radius: 16px;
+  background: transparent;
+  color: #0f172a;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, width 0.2s ease;
+}
+
+.zerror-window *,
+.zerror-window *::before,
+.zerror-window *::after {
+  box-sizing: border-box;
+}
+
+.zerror-window--minimized {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+#zerror-window-root .zerror-window--minimized .zerror-window__header {
+  padding: 0;
+  height: 100%;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.zerror-window--minimized .zerror-window__minimize-btn {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.zerror-window:hover {
+  /* transform: translateY(-4px); */
+  box-shadow: 0 22px 55px rgba(15, 23, 42, 0.22);
+}
+
+#zerror-window-root .zerror-window__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: rgba(235, 238, 241, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  user-select: none;
+}
+
+.zerror-window__title {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 16px;
+}
+
+.zerror-window__tabs {
+  display: flex;
+  gap: 15px;
+}
+
+.zerror-window__tab {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: #64748b;
+  transition: all 0.2s;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.zerror-window__tab:hover {
+  background-color: #f1f5f9;
+  color: #3b82f6;
+}
+
+.zerror-window__tab--active {
+  color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.zerror-window__minimize-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #64748b;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zerror-window__minimize-btn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.zerror-window__minimize-icon {
+  transition: transform 0.2s ease;
+}
+
+.zerror-window__minimize-icon--rotated {
+  transform: rotate(180deg);
+}
+
+.zerror-window__hint-box {
+  padding: 24px;
+  text-align: center;
+  color: #64748b;
+  background: rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.zerror-window__body {
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.96);
+  overflow: hidden;
+  opacity: 1;
+  transition: height 0.2s ease, opacity 0.16s ease, padding 0.2s ease;
+  will-change: height, opacity, padding;
+  width: 298px;
+}
+
+.zerror-window__body-content {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  display: flow-root;
+}
+
+.zerror-window--minimized .zerror-window__body-content {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+
+.zerror-window:not(.zerror-window--minimized) .zerror-window__body {
+  transition-duration: 0.16s, 0.12s, 0.16s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1), ease-out, cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.zerror-window--minimized .zerror-window__body {
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.zerror-window__parser-info {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.zerror-window__info-text {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.zerror-window__title {
+  letter-spacing: 0.3px;
+}
+
+.zerror-window__subtitle {
+  margin: 0 0 12px 0;
+  color: #475569;
+}
+
+.zerror-window__code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  border-radius: 14px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #0f172a;
+  background: rgba(226, 232, 240, 0.7);
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.zerror-window__code img {
+  width: 140px;
+  height: 140px;
+  border-radius: 8px;
+  mix-blend-mode: multiply;
+}
+
+.zerror-window__meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.zerror-window__meta-item {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(226, 232, 240, 0.6);
+}
+
+.zerror-window__meta-label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.zerror-window__meta-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.zerror-window__user {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.06);
+  margin-bottom: 14px;
+}
+
+.zerror-window__user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.zerror-window__user-time {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.zerror-window__campus {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(226, 232, 240, 0.6);
+  /* margin-bottom: 14px; */
+}
+
+.zerror-window__campus-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #0f172a;
+}
+
+.zerror-window__campus-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.zerror-window__campus-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.zerror-window__campus-status {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.zerror-window__courses,
+.zerror-window__tools {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(226, 232, 240, 0.6);
+  /* margin-bottom: 14px; */
+}
+
+.zerror-window__courses{
+    margin-bottom: 14px;
+}
+
+.zerror-window__courses-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #0f172a;
+}
+
+.zerror-window__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.zerror-window__field-label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.zerror-window__select {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 12px;
+}
+
+.zerror-window__select:disabled {
+  opacity: 0.6;
+}
+
+.zerror-window__select-wrapper {
+  position: relative;
+}
+
+.zerror-window__select-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
+  z-index: 1000000;
+  width: 220px;
+  max-width: min(240px, calc(100vw - 24px));
+  max-height: min(260px, calc(100vh - 80px));
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.zerror-window__scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.5) rgba(226, 232, 240, 0.5);
+}
+
+.zerror-window__scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.zerror-window__scrollbar::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.5);
+  border-radius: 999px;
+}
+
+.zerror-window__scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.55);
+  border-radius: 999px;
+  border: 2px solid rgba(226, 232, 240, 0.35);
+}
+
+.zerror-window__scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7);
+}
+
+.zerror-window__select-item {
+  border: none;
+  background: rgba(226, 232, 240, 0.6);
+  color: #0f172a;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.zerror-window__select-item:hover {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.zerror-window__select-empty {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.zerror-window__hint {
+  font-size: 11px;
+  color: #ef4444;
+}
+
+.zerror-window__button--full {
+  width: 100%;
+}
+
+.zerror-window__footer {
+  padding: 10px 16px 14px;
+}
+
+.zerror-window__button--ghost {
+  width: 100%;
+  background: rgba(148, 163, 184, 0.15);
+  border-color: transparent;
+}
+
+.zerror-window__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.zerror-window__button {
+  box-sizing: border-box;
+  flex: 1;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.zerror-window__button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.zerror-window__button--primary {
+  background: linear-gradient(120deg, #38bdf8, #6366f1);
+  color: #f8fafc;
+  border-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .zerror-window {
+    background: transparent;
+    color: #e2e8f0;
+    border-color: rgba(148, 163, 184, 0.25);
+  }
+
+  #zerror-window-root .zerror-window__header {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .zerror-window__body {
+     background: rgba(15, 23, 42, 0.95);
+  }
+
+  .zerror-window__subtitle {
+    color: #cbd5f5;
+  }
+
+  .zerror-window__code {
+    background: rgba(15, 23, 42, 0.8);
+    color: #e2e8f0;
+  }
+
+  .zerror-window__meta-item {
+    background: rgba(30, 41, 59, 0.8);
+  }
+
+  .zerror-window__meta-label {
+    color: #94a3b8;
+  }
+
+  .zerror-window__meta-value {
+    color: #e2e8f0;
+  }
+
+  .zerror-window__user {
+    background: rgba(15, 23, 42, 0.8);
+  }
+
+  .zerror-window__user-name {
+    color: #e2e8f0;
+  }
+
+  .zerror-window__user-time {
+    color: #94a3b8;
+  }
+
+  .zerror-window__campus {
+    background: rgba(30, 41, 59, 0.8);
+  }
+
+  .zerror-window__campus-title,
+  .zerror-window__campus-name {
+    color: #e2e8f0;
+  }
+
+  .zerror-window__campus-status {
+    color: #94a3b8;
+  }
+
+  .zerror-window__courses,
+  .zerror-window__tools {
+    background: rgba(30, 41, 59, 0.8);
+  }
+
+  .zerror-window__courses-title {
+    color: #e2e8f0;
+  }
+
+  .zerror-window__select {
+    background: rgba(15, 23, 42, 0.8);
+    color: #e2e8f0;
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+
+  .zerror-window__select-menu {
+    background: rgba(15, 23, 42, 0.95);
+    border-color: rgba(148, 163, 184, 0.3);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.45);
+  }
+
+  .zerror-window__select-item {
+    background: rgba(30, 41, 59, 0.8);
+    color: #e2e8f0;
+  }
+
+  .zerror-window__select-item:hover {
+    background: rgba(59, 130, 246, 0.2);
+    color: #bfdbfe;
+  }
+
+  .zerror-window__select-empty {
+    color: #94a3b8;
+  }
+
+  .zerror-window__scrollbar {
+    scrollbar-color: rgba(148, 163, 184, 0.6) rgba(30, 41, 59, 0.7);
+  }
+
+  .zerror-window__scrollbar::-webkit-scrollbar-track {
+    background: rgba(30, 41, 59, 0.7);
+  }
+
+  .zerror-window__scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.6);
+    border-color: rgba(30, 41, 59, 0.6);
+  }
+
+  .zerror-window__scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(96, 165, 250, 0.8);
+  }
+
+  .zerror-window__field-label {
+    color: #94a3b8;
+  }
+
+  .zerror-window__button {
+    background: rgba(15, 23, 42, 0.8);
+    color: #e2e8f0;
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+}
