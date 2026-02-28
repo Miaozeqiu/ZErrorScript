@@ -206,13 +206,71 @@ const parseQuestion = (questionEl) => {
     } else if (answer === '未找到答案') {
         // 检查是否已做答且正确（marking_dui）
         const isCorrect = questionEl.querySelector('.marking_dui');
+        // 考试模式下，如果没有 marking_dui 也没有 marking_cuo，可能正在考试中
+        // 此时，用户填写的内容应该被视为"答案"（虽然不知道对错，但用户要求提取）
+        const isExamMode = window.location.href.includes('exam/preview');
+        
         if (isCorrect) {
             // 如果已做答且正确，提取“我的答案”作为正确答案
             const myAnswerEl = questionEl.querySelector('.myAnswer .answerCon');
             if (myAnswerEl) {
                 answer = extractContentWithImages(myAnswerEl);
             }
-        } else {
+        } else if (isExamMode) {
+             // 考试模式下，提取作答内容
+             // 1. 填空题/简答题 (UEditor)
+             const subEditors = questionEl.querySelectorAll('.subEditor iframe');
+             if (subEditors.length > 0) {
+                 const parts = [];
+                 subEditors.forEach(iframe => {
+                     try {
+                         const doc = iframe.contentDocument || iframe.contentWindow.document;
+                         const body = doc.body;
+                         if (body) {
+                            parts.push(body.innerText.trim());
+                         }
+                     } catch(e) {
+                         console.warn('无法访问编辑器 iframe', e);
+                     }
+                 });
+                 if (parts.length > 0) {
+                    answer = parts.join('###');
+                 }
+             } else {
+                 // 尝试 textarea
+                 const textareas = questionEl.querySelectorAll('textarea');
+                 if (textareas.length > 0) {
+                      const parts = Array.from(textareas).map(t => t.value.trim()).filter(Boolean);
+                      if (parts.length > 0) answer = parts.join('###');
+                 }
+             }
+             
+             // 2. 单选/多选/判断 (从选中状态获取)
+             // 通常选中项会有特定的 class 或者 input:checked
+             // 学习通考试页面选中项可能在 .answerBg .answer_p 或者是 input[checked]
+             if (answer === '未找到答案') {
+                 // 尝试查找选中的 input
+                 const checkedInputs = questionEl.querySelectorAll('input:checked');
+                 if (checkedInputs.length > 0) {
+                     const selectedOptions = [];
+                     checkedInputs.forEach(input => {
+                         // 找到对应的选项文本
+                         // input 通常在 li 中，文本在 li 的其他地方
+                         const li = input.closest('li');
+                          if (li) {
+                              let optText = extractContentWithImages(li);
+                              // 移除 A. B. 前缀
+                              optText = optText.replace(/^[A-Z][\.\、\s]+/, '');
+                              selectedOptions.push(optText);
+                          }
+                      });
+                      if (selectedOptions.length > 0) {
+                          if (type === 'multiple_choice') answer = selectedOptions.join('#');
+                          else answer = selectedOptions[0];
+                      }
+                  }
+              }
+         } else {
              // 检查错题情况
              const isWrong = questionEl.querySelector('.marking_cuo');
              if (isWrong) {
