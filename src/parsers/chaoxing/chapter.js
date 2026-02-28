@@ -173,7 +173,7 @@ const addQuestionToExam = async (data, context) => {
       question_bank_id: parseInt(folderId) // 使用传入的 folderId
     };
 
-    const addRes = await fetch(`https://campuses.zerror.cc/folders/${folderId}/questions`, {
+    const addRes = await fetch(`https://campuses.zerror.cc/courses/${courseId}/questions`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
