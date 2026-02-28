@@ -195,6 +195,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { initXXTParser } from './parsers/chaoxing/homework.js'
 import { initXXTChapterParser } from './parsers/chaoxing/chapter.js'
 import { initXXTSuitangParser } from './parsers/chaoxing/suitang.js'
+import { initXXTExamParser } from './parsers/chaoxing/exam.js'
 import { initMoocParser } from './parsers/mooc/index.js'
 import { initZhihuiZhijiaoParser } from './parsers/zhihuizhijiao/index.js'
 import { saveSelection, getSavedSelection, setDetectedActiveId, saveWindowState, getSavedWindowState } from './utils/preference.js'
@@ -906,6 +907,8 @@ const runParser = async () => {
         result = await initMoocParser(context);
       } else if (isZhihuiZhijiao) {
         result = await initZhihuiZhijiaoParser(context);
+      } else if (window.location.href.includes('/mooc2/exam/preview')) {
+        result = await initXXTExamParser(context);
       } else if (window.location.href.includes('/mycourse/studentstudy') || window.location.href.includes('/knowledge/cards')) {
         result = await initXXTChapterParser(context);
       } else if (window.location.href.includes('/quiz/stu/') || window.location.href.includes('/mycourse/stu') || document.querySelector('.question-item')) {
@@ -948,6 +951,8 @@ const runParser = async () => {
       result = await initMoocParser();
     } else if (isZhihuiZhijiao) {
       result = await initZhihuiZhijiaoParser();
+    } else if (window.location.href.includes('/mooc2/exam/preview')) {
+      result = await initXXTExamParser();
     } else if (window.location.href.includes('/mycourse/studentstudy') || window.location.href.includes('/knowledge/cards')) {
       result = await initXXTChapterParser();
     } else if (window.location.href.includes('/quiz/stu/') || window.location.href.includes('/mycourse/stu') || document.querySelector('.question-item')) {
