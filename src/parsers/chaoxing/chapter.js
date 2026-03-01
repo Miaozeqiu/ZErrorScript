@@ -5,6 +5,7 @@
  */
 
 import { initXXTParser } from './homework.js';
+import { mappingRecognize } from '../../utils/cx-decrypt.js';
 
 // 注入样式（复用或独立）
 const injectStyles = () => {
@@ -258,9 +259,26 @@ const parseChapterQuestion = (questionEl) => {
     // 通常在 .Zy_TItle .font-cx 中，或者 .Zy_TItle .qtContent
     let titleEl = questionEl.querySelector('.Zy_TItle .qtContent');
     if (!titleEl) titleEl = questionEl.querySelector('.Zy_TItle .font-cx');
+    if (!titleEl) titleEl = questionEl.querySelector('.Zy_TItle .fontLabel'); // 适配 fontLabel 结构
     if (!titleEl) titleEl = questionEl.querySelector('.mark_name .qtContent'); // 兼容作业样式
     if (!titleEl) titleEl = questionEl.querySelector('.timu_title');
     
+    // 如果仍然找不到，尝试直接获取 .Zy_TItle 的文本，并手动清理
+    if (!titleEl) {
+        const zyTitle = questionEl.querySelector('.Zy_TItle');
+        if (zyTitle) {
+            // 克隆节点以避免修改原始 DOM
+            const clone = zyTitle.cloneNode(true);
+            // 移除不需要的元素，如操作按钮
+            const removeSelectors = ['.zerror-xxt-parser-marker', '.zerror-xxt-parser-btn', '.TiMu_ico', 'i.fl'];
+            removeSelectors.forEach(sel => {
+                const els = clone.querySelectorAll(sel);
+                els.forEach(el => el.remove());
+            });
+            titleEl = clone;
+        }
+    }
+
     let title = titleEl ? titleEl.innerText.trim() : '未知题目';
     // 移除题号 (例如 "1. ")
     title = title.replace(/^\d+[\.、\s]*/, '');
@@ -277,7 +295,7 @@ const parseChapterQuestion = (questionEl) => {
         else if (typeText.includes('多选')) type = 'multiple_choice';
         else if (typeText.includes('判断')) type = 'true_false';
         else if (typeText.includes('填空')) type = 'fill_blank';
-        else if (typeText.includes('简答')) type = 'short_answer';
+        else if (typeText.includes('简答') || typeText.includes('名词解释')) type = 'short_answer';
     } else {
         // 尝试从 mark_name 获取
         let typeText = questionEl.querySelector('.mark_name .colorShallow')?.innerText || '';
@@ -285,12 +303,16 @@ const parseChapterQuestion = (questionEl) => {
         if (!typeText && titleEl) {
              typeText = titleEl.innerText;
         }
+        // 尝试从 .newZy_TItle 获取
+        if (!typeText) {
+             typeText = questionEl.querySelector('.newZy_TItle')?.innerText || '';
+        }
 
         if (typeText.includes('单选')) type = 'single_choice';
         else if (typeText.includes('多选')) type = 'multiple_choice';
         else if (typeText.includes('判断')) type = 'true_false';
         else if (typeText.includes('填空')) type = 'fill_blank';
-        else if (typeText.includes('简答')) type = 'short_answer';
+        else if (typeText.includes('简答') || typeText.includes('名词解释')) type = 'short_answer';
     }
 
     // 选项
@@ -300,17 +322,20 @@ const parseChapterQuestion = (questionEl) => {
     if (optionEls.length === 0) optionEls = questionEl.querySelectorAll('.mark_letter li');
     
     optionEls.forEach(el => {
-      let optText = el.innerText.trim();
-      // 移除选项前缀 A. B. 等
-      optText = optText.replace(/^[A-Z][\.\、\s]+/, '');
-      
-      // 有时候文本在 a 标签中
+      let optText = '';
+      // 优先查找 a 标签中的文本
       const aTag = el.querySelector('a');
       if (aTag) {
-          let aText = aTag.innerText.trim();
-          aText = aText.replace(/^[A-Z][\.\、\s]+/, '');
-          if(aText) optText = aText;
+          optText = aTag.innerText.trim();
+      } else {
+          optText = el.innerText.trim();
       }
+      
+      // 移除选项前缀 A. B. 等 (如果是从 li 直接获取的文本，可能包含前缀)
+      if (!aTag) {
+          optText = optText.replace(/^[A-Z][\.\、\s]+/, '');
+      }
+      
       options.push(optText);
     });
 
@@ -334,29 +359,98 @@ const parseChapterQuestion = (questionEl) => {
         if (rightAnsEl) {
             answer = rightAnsEl.innerText.trim();
         } else {
-            // 检查是否已做答且正确（marking_dui）
-            const isCorrect = questionEl.querySelector('.marking_dui');
-            if (isCorrect) {
-                // 如果已做答且正确，提取“我的答案”作为正确答案
-                const myAnswerEl = questionEl.querySelector('.myAnswer .answerCon');
-                if (myAnswerEl) {
-                    answer = myAnswerEl.innerText.trim();
-                }
-            } else {
-                // 如果没有正确答案，也没有 marking_dui，则认为是错题或未做题，不提取答案
-                // 确保 answer 保持默认值 '未找到答案'
-                const isWrong = questionEl.querySelector('.marking_cuo');
-                if (isWrong) {
-                    console.log('【错题】发现一道错题', title);
-                    console.log('ID:', id);
-                    // 尝试寻找是否有隐藏的正确答案（有时错题也会显示正确答案）
-                    const hiddenRightAns = questionEl.querySelector('.mark_answer .rightAnswerContent');
-                    if (hiddenRightAns) {
-                        console.log('  -> 但发现显示了正确答案:', hiddenRightAns.innerText.trim());
-                    } else {
-                        console.log('  -> 未显示正确答案');
+             // 尝试 .correctAnswer .answerCon
+             const correctAnsCon = questionEl.querySelector('.correctAnswer .answerCon');
+             if (correctAnsCon) {
+                 answer = correctAnsCon.innerText.trim();
+             } else {
+                // 尝试从 .correctAnswerBx .correctAnswer 提取（针对名词解释等题型）
+                // 这种结构下，答案通常在第二个 .correctAnswer div 中，或者包含 .marTop6
+                const correctAnswerBlock = questionEl.querySelector('.correctAnswerBx');
+                if (correctAnswerBlock) {
+                    // 如果是填空题，尝试提取所有空
+                    if (type === 'fill_blank') {
+                        const caDivs = correctAnswerBlock.querySelectorAll('.correctAnswer');
+                        const answers = [];
+                        caDivs.forEach(div => {
+                            const text = div.innerText.trim();
+                            // 排除 "正确答案：" 标签
+                            if (!text.startsWith('正确答案：')) {
+                                // 移除 "第一空：" "第二空：" 等前缀
+                                const cleanText = text.replace(/^第[一二三四五六七八九十]+空[：:]\s*/, '').trim();
+                                if (cleanText) {
+                                    answers.push(cleanText);
+                                }
+                            }
+                        });
+                        if (answers.length > 0) {
+                            answer = answers.join('&&&');
+                        }
+                    }
+
+                    // 如果答案仍未找到（非填空题或提取失败），尝试默认逻辑
+                    if (answer === '未找到答案') {
+                        const contentDiv = correctAnswerBlock.querySelector('.correctAnswer.marTop6');
+                        if (contentDiv) {
+                            answer = contentDiv.innerText.trim();
+                        } else {
+                            // 如果没有 marTop6，尝试获取所有 .correctAnswer，排除包含“正确答案”标签的那个
+                            const caDivs = correctAnswerBlock.querySelectorAll('.correctAnswer');
+                            for (let i = 0; i < caDivs.length; i++) {
+                                const divText = caDivs[i].innerText.trim();
+                                if (!divText.startsWith('正确答案')) {
+                                    answer = divText;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
+                
+                if (answer !== '未找到答案') {
+                    // 找到了答案，跳过后续检查
+                } else {
+                     // 检查是否已做答且正确（marking_dui）
+                     const isCorrect = questionEl.querySelector('.marking_dui');
+                     if (isCorrect) {
+                         // 如果已做答且正确，提取“我的答案”作为正确答案
+                         const myAnswerEl = questionEl.querySelector('.myAnswer .answerCon');
+                         if (myAnswerEl) {
+                             answer = myAnswerEl.innerText.trim();
+                         }
+                     } else {
+                         // 如果没有正确答案，也没有 marking_dui，则认为是错题或未做题，不提取答案
+                         // 确保 answer 保持默认值 '未找到答案'
+                         const isWrong = questionEl.querySelector('.marking_cuo');
+                     }
+                }
+             }
+        }
+    }
+
+    // 如果答案仍然未找到，且是填空题，尝试从多个空提取
+    // 上面已经处理了 fill_blank 的情况，这里作为双重保险，或者处理其他未被覆盖的情况
+    if (type === 'fill_blank' && (answer === '未找到答案' || answer.trim() === '')) {
+        // 尝试从 .correctAnswerBx .correctAnswer 提取所有空
+        const correctAnswerBlock = questionEl.querySelector('.correctAnswerBx');
+        if (correctAnswerBlock) {
+            const caDivs = correctAnswerBlock.querySelectorAll('.correctAnswer');
+            const answers = [];
+            caDivs.forEach(div => {
+                const text = div.innerText.trim();
+                // 排除 "正确答案：" 标签
+                if (!text.startsWith('正确答案：')) {
+                    // 移除 "第一空：" "第二空：" 等前缀
+                    const cleanText = text.replace(/^第[一二三四五六七八九十]+空[：:]\s*/, '').trim();
+                    if (cleanText) {
+                        answers.push(cleanText);
+                    }
+                }
+            });
+            if (answers.length > 0) {
+                // 将多个空的答案合并，通常用特定分隔符（如分号或换行）
+                // 学习通的填空题多个空通常用 分号 或 &&& 或 # 分隔，这里暂用 &&& 以便后续处理
+                answer = answers.join('&&&');
             }
         }
     }
@@ -583,6 +677,16 @@ export const initXXTChapterParser = async (context = {}) => {
           // 如果递归查找也没找到，重置为空
           questions = [];
       }
+  }
+
+  // 在处理题目之前，先尝试解密字体
+  if (questions.length > 0) {
+    try {
+      console.log('检测到题目，尝试进行字体解密...');
+      await mappingRecognize(doc);
+    } catch (e) {
+      console.error('字体解密失败:', e);
+    }
   }
 
   if (questions.length === 0) {

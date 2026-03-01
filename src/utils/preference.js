@@ -86,6 +86,25 @@ const getCurrentWorkKey = () => {
             return `cx_active_${activeId}`;
         }
 
+        // 4. 尝试 /mooc2/exam/preview (考试页面)
+        if (window.location.href.includes('/mooc2/exam/preview')) {
+            const courseId = getUrlParam('courseId') || getUrlParam('courseid');
+            const examRelationId = getUrlParam('examRelationId');
+            if (courseId && examRelationId) {
+                console.log(`[ZError] 定位文件夹原因: 考试页面 (课程ID: ${courseId}, 试卷ID: ${examRelationId})`);
+                return `cx_exam_${courseId}_${examRelationId}`;
+            }
+        }
+
+        // 5. 尝试 reVersionPaperMarkContentNew (试卷复习页面)
+        if (window.location.href.includes('reVersionPaperMarkContentNew')) {
+            const courseId = getUrlParam('courseId') || getUrlParam('courseid');
+            if (courseId) {
+                console.log(`[ZError] 定位文件夹原因: 试卷复习页面 reVersionPaperMarkContentNew (课程ID: ${courseId})`);
+                return `cx_exam_review_${courseId}`;
+            }
+        }
+
         // 如果在顶层页面，遍历 iframe 查找
         const iframes = document.querySelectorAll('iframe');
         for (const iframe of iframes) {

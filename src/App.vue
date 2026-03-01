@@ -62,60 +62,73 @@
               <div class="zerror-window__courses-title">课程选择</div>
               <div class="zerror-window__field">
                 <label class="zerror-window__field-label">课程</label>
-                <div class="zerror-window__select-wrapper">
-                  <input
-                    class="zerror-window__select"
-                    ref="courseInputRef"
-                    :disabled="coursesLoading || !courses.length"
-                    v-model="courseSearch"
-                    @focus="openCourseOptions"
-                    @input="handleCourseInput"
-                    @blur="handleCourseBlur"
-                    placeholder="请选择课程"
-                  />
-                  <Teleport to="body">
-                    <div v-if="showCourseOptions" class="zerror-window__select-menu zerror-window__scrollbar" :style="courseMenuStyle">
-                      <button
-                        v-for="course in filteredCourses"
-                        :key="course.ID"
-                        type="button"
-                        class="zerror-window__select-item"
-                        @click="selectCourse(course)"
-                      >
-                        {{ course.Name }}
-                      </button>
-                      <div v-if="!filteredCourses.length" class="zerror-window__select-empty">无匹配课程</div>
-                    </div>
-                  </Teleport>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <div class="zerror-window__select-wrapper" style="flex: 1;">
+                    <input
+                      class="zerror-window__select"
+                      ref="courseInputRef"
+                      :disabled="coursesLoading || !courses.length"
+                      v-model="courseSearch"
+                      @focus="openCourseOptions"
+                      @input="handleCourseInput"
+                      @blur="handleCourseBlur"
+                      placeholder="请选择课程"
+                    />
+                    <Teleport to="body">
+                      <div v-if="showCourseOptions" class="zerror-window__select-menu zerror-window__scrollbar" :style="courseMenuStyle">
+                        <button
+                          v-for="course in filteredCourses"
+                          :key="course.ID"
+                          type="button"
+                          class="zerror-window__select-item"
+                          @click="selectCourse(course)"
+                        >
+                          {{ course.Name }}
+                        </button>
+                        <div v-if="!filteredCourses.length" class="zerror-window__select-empty">无匹配课程</div>
+                      </div>
+                    </Teleport>
+                  </div>
+                  <div class="zerror-window__icon-btn" @click="openCampusLink" title="添加/管理课程">
+                    <svg t="1772276665619" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5534" width="20" height="20" style="fill: currentColor;"><path d="M512 876.632c-201.38 0-364.632-163.252-364.632-364.632S310.62 147.368 512 147.368 876.632 310.62 876.632 512 713.38 876.632 512 876.632zM512 945c239.139 0 433-193.861 433-433S751.139 79 512 79 79 272.861 79 512s193.861 433 433 433z m-34.198-586.855c0-22.026 17.855-39.881 39.881-39.881s39.882 17.855 39.882 39.881v119.674h119.654c22.026 0 39.882 17.856 39.882 39.882 0 22.026-17.856 39.882-39.882 39.882H557.565v119.615c0 22.026-17.856 39.881-39.882 39.881-22.026 0-39.881-17.855-39.881-39.881V557.583H358.166c-22.026 0-39.881-17.856-39.881-39.882 0-22.026 17.855-39.882 39.881-39.882h119.636V358.145z" p-id="5537"></path></svg>
+                  </div>
                 </div>
               </div>
               <div class="zerror-window__field">
                 <label class="zerror-window__field-label">试卷</label>
-                <div class="zerror-window__select-wrapper">
-                  <input
-                    class="zerror-window__select"
-                    ref="folderInputRef"
-                    :disabled="foldersLoading || !folders.length"
-                    v-model="folderSearch"
-                    @focus="openFolderOptions"
-                    @input="handleFolderInput"
-                    @blur="handleFolderBlur"
-                    placeholder="请选择试卷"
-                  />
-                  <Teleport to="body">
-                    <div v-if="showFolderOptions" class="zerror-window__select-menu zerror-window__scrollbar" :style="folderMenuStyle">
-                      <button
-                        v-for="folder in filteredFolders"
-                        :key="folder.ID"
-                        type="button"
-                        class="zerror-window__select-item"
-                        @click="selectFolder(folder)"
-                      >
-                        {{ folder.Name }}
-                      </button>
-                      <div v-if="!filteredFolders.length" class="zerror-window__select-empty">无匹配文件夹</div>
-                    </div>
-                  </Teleport>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <div class="zerror-window__select-wrapper" style="flex: 1;">
+                    <input
+                      class="zerror-window__select"
+                      ref="folderInputRef"
+                      :disabled="foldersLoading || !folders.length"
+                      v-model="folderSearch"
+                      @focus="openFolderOptions"
+                      @input="handleFolderInput"
+                      @blur="handleFolderBlur"
+                      placeholder="请选择试卷"
+                    />
+                    <Teleport to="body">
+                      <div v-if="showFolderOptions" class="zerror-window__select-menu zerror-window__scrollbar" :style="folderMenuStyle">
+                        <button
+                          v-for="folder in filteredFolders"
+                          :key="folder.ID"
+                          type="button"
+                          class="zerror-window__select-item"
+                          @click="selectFolder(folder)"
+                        >
+                          {{ folder.Name }}
+                        </button>
+                        <div v-if="!filteredFolders.length" class="zerror-window__select-empty">无匹配文件夹</div>
+                      </div>
+                    </Teleport>
+                  </div>
+                  <div class="zerror-window__icon-btn" @click="openCampusLink" title="添加/管理试卷">
+                    <svg t="1772276665619" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5534" width="20" height="20" style="fill: currentColor;"><path d="M512 876.632c-201.38 0-364.632-163.252-364.632-364.632S310.62 147.368 512 147.368 876.632 310.62 876.632 512 713.38 876.632 512 876.632zM512 945c239.139 0 433-193.861 433-433S751.139 79 512 79 79 272.861 79 512s193.861 433 433 433z m-34.198-586.855c0-22.026 17.855-39.881 39.881-39.881s39.882 17.855 39.882 39.881v119.674h119.654c22.026 0 39.882 17.856 39.882 39.882 0 22.026-17.856 39.882-39.882 39.882H557.565v119.615c0 22.026-17.856 39.881-39.882 39.881-22.026 0-39.881-17.855-39.881-39.881V557.583H358.166c-22.026 0-39.881-17.856-39.881-39.882 0-22.026 17.855-39.882 39.881-39.882h119.636V358.145z" p-id="5537"></path></svg>
+                  </div>
+                </div>
+                <div v-if="currentPlatformName" class="zerror-window__hint" style="margin-top: 4px; color: #64748b; font-size: 12px;">
+                  当前在{{ currentPlatformName }}页面只会显示{{ currentPlatformName }}的试卷，如发现试卷未显示，请检查有无正常给试卷打上标签
                 </div>
               </div>
               <div v-if="coursesError" class="zerror-window__hint">{{ coursesError }}</div>
@@ -195,7 +208,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { initXXTParser } from './parsers/chaoxing/homework.js'
 import { initXXTChapterParser } from './parsers/chaoxing/chapter.js'
 import { initXXTSuitangParser } from './parsers/chaoxing/suitang.js'
-import { initXXTExamParser } from './parsers/chaoxing/exam.js'
+import { initXXTExamingParser } from './parsers/chaoxing/examing.js'
+import { initXXTExamReviewParser } from './parsers/chaoxing/exam_review.js'
 import { initMoocParser } from './parsers/mooc/index.js'
 import { initZhihuiZhijiaoParser } from './parsers/zhihuizhijiao/index.js'
 import { saveSelection, getSavedSelection, setDetectedActiveId, saveWindowState, getSavedWindowState } from './utils/preference.js'
@@ -346,7 +360,7 @@ const getFolderTagId = (folder) => {
   return null
 }
 
-const matchingTagIds = computed(() => {
+const matchingTags = computed(() => {
   const host = window.location.hostname
   if (!host || !tags.value.length) return []
   return tags.value
@@ -354,8 +368,19 @@ const matchingTagIds = computed(() => {
       const domains = parseDomains(tag?.domains)
       return domains.some(domain => host === domain || host.endsWith(`.${domain}`))
     })
+})
+
+const matchingTagIds = computed(() => {
+  return matchingTags.value
     .map(tag => Number(tag.id))
     .filter(id => Number.isFinite(id))
+})
+
+const currentPlatformName = computed(() => {
+  if (matchingTags.value.length > 0) {
+    return matchingTags.value.map(t => t.Name || t.name).join('/')
+  }
+  return ''
 })
 
 const filteredCourses = computed(() => {
@@ -908,7 +933,9 @@ const runParser = async () => {
       } else if (isZhihuiZhijiao) {
         result = await initZhihuiZhijiaoParser(context);
       } else if (window.location.href.includes('/mooc2/exam/preview')) {
-        result = await initXXTExamParser(context);
+        result = await initXXTExamingParser(context);
+      } else if (window.location.href.includes('reVersionPaperMarkContentNew')) {
+        result = await initXXTExamReviewParser(context);
       } else if (window.location.href.includes('/mycourse/studentstudy') || window.location.href.includes('/knowledge/cards')) {
         result = await initXXTChapterParser(context);
       } else if (window.location.href.includes('/quiz/stu/') || window.location.href.includes('/mycourse/stu') || document.querySelector('.question-item')) {
@@ -952,7 +979,9 @@ const runParser = async () => {
     } else if (isZhihuiZhijiao) {
       result = await initZhihuiZhijiaoParser();
     } else if (window.location.href.includes('/mooc2/exam/preview')) {
-      result = await initXXTExamParser();
+      result = await initXXTExamingParser();
+    } else if (window.location.href.includes('reVersionPaperMarkContentNew')) {
+      result = await initXXTExamReviewParser();
     } else if (window.location.href.includes('/mycourse/studentstudy') || window.location.href.includes('/knowledge/cards')) {
       result = await initXXTChapterParser();
     } else if (window.location.href.includes('/quiz/stu/') || window.location.href.includes('/mycourse/stu') || document.querySelector('.question-item')) {
