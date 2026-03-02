@@ -384,7 +384,7 @@ const parseChapterQuestion = (questionEl) => {
                             }
                         });
                         if (answers.length > 0) {
-                            answer = answers.join('&&&');
+                            answer = answers.join('###');
                         }
                     }
 
@@ -449,8 +449,8 @@ const parseChapterQuestion = (questionEl) => {
             });
             if (answers.length > 0) {
                 // 将多个空的答案合并，通常用特定分隔符（如分号或换行）
-                // 学习通的填空题多个空通常用 分号 或 &&& 或 # 分隔，这里暂用 &&& 以便后续处理
-                answer = answers.join('&&&');
+                // 学习通的填空题多个空通常用 分号 或 ### 或 # 分隔，这里暂用 ### 以便后续处理
+                answer = answers.join('###');
             }
         }
     }
