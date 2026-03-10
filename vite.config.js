@@ -21,7 +21,7 @@ export default defineConfig({
         banner: `// ==UserScript==
 // @name         ZError题库上传脚本
 // @namespace    http://tampermonkey.net/
-// @version      1.0.6
+// @version      1.0.7
 // @description  ZError题库上传脚本，支持学习通，智慧职教，mooc等平台题目解析与上传
 // @author       ZError
 // @match        *://*.chaoxing.com/*
