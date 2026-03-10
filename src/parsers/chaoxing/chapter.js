@@ -4,207 +4,16 @@
  * 需要处理 iframe 内容
  */
 
-import { initXXTParser } from './homework.js';
 import { mappingRecognize } from '../../utils/cx-decrypt.js';
+import { extractContentWithImages, normalizeFillBlankAnswer, injectStyles, addQuestionToExam } from './common.js';
 
-// 注入样式（复用或独立）
-const injectStyles = () => {
-  const styleId = 'xxt-chapter-parser-styles';
-  if (document.getElementById(styleId)) return;
-
-  const style = document.createElement('style');
-  style.id = styleId;
-  style.textContent = `
-    .zerror-xxt-parser-marker {
-      display: inline-block;
-      margin-left: 10px;
-      padding: 2px 6px;
-      background-color: #e0f2fe;
-      color: #0284c7;
-      border-radius: 4px;
-      font-size: 12px;
-      cursor: pointer;
-      border: 1px solid #bae6fd;
-      z-index: 9999;
-      position: relative;
-    }
-    .zerror-xxt-parser-marker:hover {
-      background-color: #bae6fd;
-    }
-    .zerror-xxt-parser-panel {
-      margin-top: 10px;
-      padding: 15px;
-      background-color: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: 14px;
-      color: #334155;
-      animation: fadeIn 0.3s ease;
-      position: relative;
-      z-index: 1000;
-    }
-    .zerror-xxt-parser-panel h4 {
-      margin: 0 0 10px 0;
-      color: #0f172a;
-      font-size: 15px;
-      font-weight: 600;
-    }
-    .zerror-xxt-parser-item {
-      margin-bottom: 8px;
-      line-height: 1.5;
-    }
-    .zerror-xxt-parser-label {
-      font-weight: 600;
-      color: #64748b;
-      margin-right: 5px;
-    }
-    .zerror-xxt-parser-options li {
-      margin-bottom: 4px;
-      padding: 4px 8px;
-      background: #fff;
-      border-radius: 4px;
-      border: 1px solid #f1f5f9;
-    }
-    .zerror-xxt-parser-answer {
-      color: #16a34a;
-      font-weight: bold;
-      background: #dcfce7;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-    .zerror-xxt-parser-btn {
-      display: inline-block;
-      margin-left: 10px;
-      padding: 2px 8px;
-      background-color: #3b82f6;
-      color: #fff;
-      border-radius: 4px;
-      font-size: 12px;
-      cursor: pointer;
-      border: none;
-      transition: background-color 0.2s;
-    }
-    .zerror-xxt-parser-btn:hover {
-      background-color: #2563eb;
-    }
-    .zerror-xxt-parser-btn:disabled {
-      background-color: #94a3b8;
-      cursor: not-allowed;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-5px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  `;
-  // 注意：如果是 iframe 内部解析，样式需要注入到 iframe 文档中
-  // 这里暂时只注入到主文档，如果脚本能进入 iframe，需要在 iframe 中注入
-  document.head.appendChild(style);
-};
-
-// 添加题目到试卷 (复用 xxtParser 的逻辑，但为了独立性，这里复制一份或从外部传入)
-// 为简单起见，我们假设 addQuestionToExam 逻辑是一样的，可以在 App.vue 中统一处理，或者在这里重新定义
-const addQuestionToExam = async (data, context) => {
-  const { token, courseId, folderId } = context;
-  if (!token) return 'failed';
-  
-  // 1. 获取现有题目进行查重
-  let existingQuestions = context.existingQuestions || [];
-  
-  if (existingQuestions.length === 0) {
-    try {
-      const existingRes = await fetch(`https://campuses.zerror.cc/folders/${folderId}/questions`, {
-        headers: { Authorization: token }
-      });
-      if (existingRes.ok) {
-        existingQuestions = await existingRes.json();
-        context.existingQuestions = existingQuestions;
-      }
-    } catch (e) {
-      console.error('查重失败:', e);
-    }
-  }
-
-  const existingQuestion = existingQuestions.find(q => q.Content === data.title);
-  if (existingQuestion) {
-    // 检查是否需要更新答案
-    // 只有当当前解析出有效答案，且远程题目答案不一致（例如是“未找到答案”或空）时才更新
-    if (data.answer && data.answer !== '未找到答案' && existingQuestion.Answer !== data.answer) {
-        try {
-            console.log(`更新题目 ${existingQuestion.ID} 的答案 ${existingQuestion.Answer} -> ${data.answer}`);
-            const updatePayload = {
-                content: data.title,
-                answer: data.answer,
-                options: JSON.stringify(data.options),
-                type: data.type
-            };
-            
-            const updateRes = await fetch(`https://campuses.zerror.cc/questions/${existingQuestion.ID}`, {
-                method: 'PUT',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    Authorization: token 
-                },
-                body: JSON.stringify(updatePayload)
-            });
-
-            if (updateRes.ok) {
-                // 更新本地缓存
-                existingQuestion.Answer = data.answer;
-                return 'updated';
-            } else {
-                console.error('更新答案失败:', await updateRes.text());
-                return 'update_failed';
-            }
-        } catch (e) {
-            console.error('更新请求异常:', e);
-            return 'update_error';
-        }
-    }
-    return 'duplicate'; 
-  }
-
-  // 2. 添加题目
-  try {
-    const payload = {
-      type: data.type,
-      content: data.title,
-      answer: data.answer,
-      options: JSON.stringify(data.options),
-      add_to_top: false,
-      question_bank_id: parseInt(folderId) // 使用传入的 folderId
-    };
-
-    const addRes = await fetch(`https://campuses.zerror.cc/courses/${courseId}/questions`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        Authorization: token 
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (addRes.ok) {
-      return 'success';
-    } else {
-      return 'failed';
-    }
-  } catch (e) {
-    console.error('添加题目失败:', e);
-    return 'error';
-  }
-};
+const injectStylesLocal = (doc) => injectStyles('xxt-chapter-parser-styles', doc);
 
 // 创建展示面板
 const createInfoPanel = (data, context, doc) => {
   const panel = doc.createElement('div');
   panel.className = 'zerror-xxt-parser-panel';
-  
-  // 检查题目是否已添加
-  let isAdded = false;
-  if (context && context.existingQuestions) {
-    isAdded = context.existingQuestions.some(q => q.Content === data.title);
-  }
-  
+
   let optionsHtml = '';
   if (data.options && data.options.length > 0) {
     optionsHtml = `
@@ -237,17 +46,139 @@ const createInfoPanel = (data, context, doc) => {
   return panel;
 };
 
-const normalizeFillBlankAnswer = (value) => {
-  if (!value) return value
-  const raw = String(value).replace(/\u00a0/g, ' ').trim()
-  const parts = raw
-    .split(/\r?\n+/)
-    .map(part => part.trim())
-    .filter(Boolean)
-    .map(part => part.replace(/^正确答案[:：]\s*/, '').replace(/^((?:\(?\d+\)?|（\d+）|[\d]+[\.、\s]*)+)/, ''))
-  if (parts.length > 1) return parts.join('###')
-  return raw.replace(/^正确答案[:：]\s*/, '').trim()
-}
+
+// 解析子题目（小题）
+// 兼容三种结构：
+//   A. 章节页  .readCompreHensionItem  (i.index + ul.choice li)
+//   B. 作业页  .reading_answer         (听力/阅读理解，.reader_answer_tit + .stem_answer .hoverDiv)
+//   C. 作业页  .filling_answer         (完型填空，.filling_num + .stem_answer .hoverDiv)
+const parseSubQuestion = (subEl) => {
+  try {
+    let type = 'single_choice';
+    let title = '未知子题';
+    const options = [];
+
+    const indexEl    = subEl.querySelector('i.index');            // A
+    const readerTit  = subEl.querySelector('.reader_answer_tit'); // B
+    const fillingNum = subEl.querySelector('.filling_num');       // C
+
+    if (indexEl) {
+      // ── A. 章节页结构 ──────────────────────────────────────
+      const indexText = indexEl.innerText || indexEl.textContent || '';
+      if (indexText.includes('单选')) type = 'single_choice';
+      else if (indexText.includes('多选')) type = 'multiple_choice';
+      else if (indexText.includes('判断')) type = 'true_false';
+      else if (indexText.includes('填空')) type = 'fill_blank';
+      else if (indexText.includes('简答')) type = 'short_answer';
+      else if (indexText.includes('论述')) type = 'essay';
+      else if (indexText.includes('计算')) type = 'calculation';
+      else if (indexText.includes('名词解释')) type = 'definition';
+
+      const clearDiv = subEl.querySelector('.clear');
+      if (clearDiv) {
+        const contentEl = clearDiv.querySelector('.clearfix');
+        if (contentEl) title = extractContentWithImages(contentEl).trim();
+      }
+
+      subEl.querySelectorAll('ul.choice li, .Zy_ulTop.choice li').forEach(el => {
+        const spans = el.querySelectorAll('span.fl');
+        if (spans.length >= 2) {
+          options.push(extractContentWithImages(spans[1]).trim());
+        } else {
+          options.push(extractContentWithImages(el).replace(/^[A-Z][、\s]+/, '').trim());
+        }
+      });
+
+    } else if (readerTit) {
+      // ── B. 作业页 听力/阅读理解结构 ───────────────────────
+      const readType = readerTit.querySelector('.read_type');
+      const typeText = readType?.innerText || readType?.textContent || '';
+      if (typeText.includes('单选')) type = 'single_choice';
+      else if (typeText.includes('多选')) type = 'multiple_choice';
+      else if (typeText.includes('判断')) type = 'true_false';
+      else if (typeText.includes('填空')) type = 'fill_blank';
+      else if (typeText.includes('简答') || typeText.includes('名词解释')) type = 'short_answer';
+
+      const titClone = readerTit.cloneNode(true);
+      titClone.querySelector('.read_type')?.remove();
+      title = extractContentWithImages(titClone).replace(/^\(\d+\)\s*/, '').trim();
+
+      subEl.querySelectorAll('.stem_answer .hoverDiv .answer_p').forEach(el => {
+        options.push(extractContentWithImages(el).trim());
+      });
+
+    } else if (fillingNum) {
+      // ── C. 作业页 完型填空结构（每空固定为单选）────────────
+      type = 'single_choice';
+      title = (fillingNum.innerText || fillingNum.textContent || '').trim();
+
+      subEl.querySelectorAll('.stem_answer .hoverDiv .answer_p').forEach(el => {
+        options.push(extractContentWithImages(el).trim());
+      });
+    }
+
+    // 答案提取
+    let answer = '未找到答案';
+
+    if (type === 'fill_blank') {
+      // 章节听力/阅读子题填空：从 .myAllAnswerBx 逐空提取
+      const allAnswerBx = subEl.querySelector('.myAllAnswerBx');
+      if (allAnswerBx) {
+        const blanks = allAnswerBx.querySelectorAll('.myAnswerBx');
+        const parts = [];
+        blanks.forEach(bx => {
+          const isCorrect = !!bx.querySelector('.marking_dui');
+          const myAnswerEl = bx.querySelector('.myAnswer');
+          if (!myAnswerEl) {
+            parts.push('此空答案未知');
+            return;
+          }
+
+          // 优先取 myAnswer 内 <p> 的内容，避免“第一空/第二空”前缀混入
+          const pEl = myAnswerEl.querySelector('p');
+          let text;
+          if (pEl) {
+            text = extractContentWithImages(pEl).trim();
+          } else {
+            const clone = myAnswerEl.cloneNode(true);
+            clone.querySelectorAll('.answerFont, p.clear').forEach(el => el.remove());
+            text = (clone.innerText || clone.textContent || '')
+              .replace(/^第[一二三四五六七八九十\d]+空[：:]\s*/, '')
+              .replace(/\u00a0/g, ' ')
+              .trim();
+          }
+
+          if (isCorrect && text) {
+            parts.push(text);
+          } else {
+            parts.push('此空答案未知');
+          }
+        });
+        if (parts.length > 0) answer = parts.join('###');
+      } else {
+        const rightAnsEl = subEl.querySelector('.mark_answer .rightAnswerContent, .mark_fill .rightAnswerContent, .rightAnswerContent');
+        if (rightAnsEl) {
+          answer = normalizeFillBlankAnswer(extractContentWithImages(rightAnsEl).trim());
+        }
+      }
+    } else {
+      // 非填空：做对取“我的答案”，否则尝试正确答案区域
+      if (subEl.querySelector('.marking_dui')) {
+        const myAnswerEl = subEl.querySelector('.myAnswer .answerCon');
+        if (myAnswerEl) answer = extractContentWithImages(myAnswerEl).trim();
+      }
+      if (answer === '未找到答案') {
+        const rightAnsEl = subEl.querySelector('.mark_answer .rightAnswerContent, .mark_fill .rightAnswerContent, .rightAnswerContent');
+        if (rightAnsEl) answer = extractContentWithImages(rightAnsEl).trim();
+      }
+    }
+
+    return { title, type, options, answer };
+  } catch (error) {
+    console.error('解析子题失败:', error);
+    return null;
+  }
+};
 
 // 解析单个题目
 const parseChapterQuestion = (questionEl) => {
@@ -279,11 +210,11 @@ const parseChapterQuestion = (questionEl) => {
         }
     }
 
-    let title = titleEl ? titleEl.innerText.trim() : '未知题目';
+    let title = titleEl ? extractContentWithImages(titleEl) : '未知题目';
     // 移除题号 (例如 "1. ")
     title = title.replace(/^\d+[\.、\s]*/, '');
     // 移除题型后缀/前缀 (支持 () 或 【】)
-    title = title.replace(/\s*[\(（【](单选题|多选题|判断题|填空题|简答题)[\)）】]\s*/g, '');
+    title = title.replace(/\s*[\(（【](单选题|多选题|判断题|填空题|简答题|论述题|名词解释|计算题|听力题|阅读理解|完形填空)[\)）】]\s*/g, '');
 
     // 题型
     let type = 'single_choice';
@@ -294,8 +225,14 @@ const parseChapterQuestion = (questionEl) => {
         if (typeText.includes('单选')) type = 'single_choice';
         else if (typeText.includes('多选')) type = 'multiple_choice';
         else if (typeText.includes('判断')) type = 'true_false';
+        else if (typeText.includes('完形')) type = 'cloze';
         else if (typeText.includes('填空')) type = 'fill_blank';
-        else if (typeText.includes('简答') || typeText.includes('名词解释')) type = 'short_answer';
+        else if (typeText.includes('简答')) type = 'short_answer';
+        else if (typeText.includes('论述')) type = 'essay';
+        else if (typeText.includes('计算')) type = 'calculation';
+        else if (typeText.includes('名词解释')) type = 'definition';
+        else if (typeText.includes('听力')) type = 'listening';
+        else if (typeText.includes('阅读')) type = 'reading';
     } else {
         // 尝试从 mark_name 获取
         let typeText = questionEl.querySelector('.mark_name .colorShallow')?.innerText || '';
@@ -311,8 +248,27 @@ const parseChapterQuestion = (questionEl) => {
         if (typeText.includes('单选')) type = 'single_choice';
         else if (typeText.includes('多选')) type = 'multiple_choice';
         else if (typeText.includes('判断')) type = 'true_false';
+        else if (typeText.includes('完形')) type = 'cloze';
         else if (typeText.includes('填空')) type = 'fill_blank';
-        else if (typeText.includes('简答') || typeText.includes('名词解释')) type = 'short_answer';
+        else if (typeText.includes('简答')) type = 'short_answer';
+        else if (typeText.includes('论述')) type = 'essay';
+        else if (typeText.includes('计算')) type = 'calculation';
+        else if (typeText.includes('名词解释')) type = 'definition';
+        else if (typeText.includes('听力')) type = 'listening';
+        else if (typeText.includes('阅读')) type = 'reading';
+    }
+
+    // 检查是否有子题目（大题：听力、阅读理解、完形填空等）
+    const subQuestionEls = questionEl.querySelectorAll(
+      '.readCompreHensionItem, .readComprehensionQues .reading_answer, .clozeTextQues .filling_answer'
+    );
+    if (subQuestionEls.length > 0) {
+      const children = [];
+      subQuestionEls.forEach(subEl => {
+        const subData = parseSubQuestion(subEl);
+        if (subData) children.push(subData);
+      });
+      return { id, title, type, options: [], answer: '', children };
     }
 
     // 选项
@@ -326,9 +282,9 @@ const parseChapterQuestion = (questionEl) => {
       // 优先查找 a 标签中的文本
       const aTag = el.querySelector('a');
       if (aTag) {
-          optText = aTag.innerText.trim();
+          optText = extractContentWithImages(aTag);
       } else {
-          optText = el.innerText.trim();
+          optText = extractContentWithImages(el);
       }
       
       // 移除选项前缀 A. B. 等 (如果是从 li 直接获取的文本，可能包含前缀)
@@ -345,7 +301,7 @@ const parseChapterQuestion = (questionEl) => {
     const answerEl = questionEl.querySelector('.Py_answer');
     if (answerEl) {
         // 格式通常为 "正确答案： A"
-        const text = answerEl.innerText.trim();
+        const text = extractContentWithImages(answerEl);
         const match = text.match(/正确答案[:：]\s*([^\s]+)/);
         if (match) {
             answer = match[1];
@@ -357,12 +313,12 @@ const parseChapterQuestion = (questionEl) => {
         // 兼容作业样式
         const rightAnsEl = questionEl.querySelector('.mark_answer .rightAnswerContent');
         if (rightAnsEl) {
-            answer = rightAnsEl.innerText.trim();
+            answer = extractContentWithImages(rightAnsEl);
         } else {
              // 尝试 .correctAnswer .answerCon
              const correctAnsCon = questionEl.querySelector('.correctAnswer .answerCon');
              if (correctAnsCon) {
-                 answer = correctAnsCon.innerText.trim();
+                 answer = extractContentWithImages(correctAnsCon);
              } else {
                 // 尝试从 .correctAnswerBx .correctAnswer 提取（针对名词解释等题型）
                 // 这种结构下，答案通常在第二个 .correctAnswer div 中，或者包含 .marTop6
@@ -373,7 +329,7 @@ const parseChapterQuestion = (questionEl) => {
                         const caDivs = correctAnswerBlock.querySelectorAll('.correctAnswer');
                         const answers = [];
                         caDivs.forEach(div => {
-                            const text = div.innerText.trim();
+                            const text = extractContentWithImages(div);
                             // 排除 "正确答案：" 标签
                             if (!text.startsWith('正确答案：')) {
                                 // 移除 "第一空：" "第二空：" 等前缀
@@ -392,12 +348,12 @@ const parseChapterQuestion = (questionEl) => {
                     if (answer === '未找到答案') {
                         const contentDiv = correctAnswerBlock.querySelector('.correctAnswer.marTop6');
                         if (contentDiv) {
-                            answer = contentDiv.innerText.trim();
+                            answer = extractContentWithImages(contentDiv);
                         } else {
                             // 如果没有 marTop6，尝试获取所有 .correctAnswer，排除包含“正确答案”标签的那个
                             const caDivs = correctAnswerBlock.querySelectorAll('.correctAnswer');
                             for (let i = 0; i < caDivs.length; i++) {
-                                const divText = caDivs[i].innerText.trim();
+                                const divText = extractContentWithImages(caDivs[i]);
                                 if (!divText.startsWith('正确答案')) {
                                     answer = divText;
                                     break;
@@ -416,12 +372,10 @@ const parseChapterQuestion = (questionEl) => {
                          // 如果已做答且正确，提取“我的答案”作为正确答案
                          const myAnswerEl = questionEl.querySelector('.myAnswer .answerCon');
                          if (myAnswerEl) {
-                             answer = myAnswerEl.innerText.trim();
+                             answer = extractContentWithImages(myAnswerEl);
                          }
                      } else {
                          // 如果没有正确答案，也没有 marking_dui，则认为是错题或未做题，不提取答案
-                         // 确保 answer 保持默认值 '未找到答案'
-                         const isWrong = questionEl.querySelector('.marking_cuo');
                      }
                 }
              }
@@ -437,7 +391,7 @@ const parseChapterQuestion = (questionEl) => {
             const caDivs = correctAnswerBlock.querySelectorAll('.correctAnswer');
             const answers = [];
             caDivs.forEach(div => {
-                const text = div.innerText.trim();
+                const text = extractContentWithImages(div);
                 // 排除 "正确答案：" 标签
                 if (!text.startsWith('正确答案：')) {
                     // 移除 "第一空：" "第二空：" 等前缀
@@ -572,50 +526,7 @@ export const initXXTChapterParser = async (context = {}) => {
   }
 
   // 在目标文档中注入样式
-  const styleId = 'xxt-chapter-parser-styles';
-  if (!doc.getElementById(styleId)) {
-      const style = doc.createElement('style');
-      style.id = styleId;
-      style.textContent = `
-        .zerror-xxt-parser-marker {
-          display: inline-block;
-          margin-left: 10px;
-          padding: 2px 6px;
-          background-color: #e0f2fe;
-          color: #0284c7;
-          border-radius: 4px;
-          font-size: 12px;
-          cursor: pointer;
-          border: 1px solid #bae6fd;
-          position: relative;
-          z-index: 999;
-        }
-        .zerror-xxt-parser-marker:hover {
-          background-color: #bae6fd;
-        }
-        .zerror-xxt-parser-panel {
-          margin-top: 10px;
-          padding: 15px;
-          background-color: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          font-size: 14px;
-          color: #334155;
-          animation: fadeIn 0.3s ease;
-          clear: both;
-        }
-        .zerror-xxt-parser-item { margin-bottom: 8px; }
-        .zerror-xxt-parser-label { font-weight: 600; color: #64748b; margin-right: 5px; }
-        .zerror-xxt-parser-answer { color: #16a34a; font-weight: bold; }
-        .zerror-xxt-parser-btn {
-            display: inline-block; margin-left: 10px; padding: 2px 8px;
-            background-color: #3b82f6; color: #fff; border-radius: 4px;
-            font-size: 12px; cursor: pointer; border: none;
-        }
-        .zerror-xxt-parser-btn:disabled { background-color: #94a3b8; }
-      `;
-      doc.head.appendChild(style);
-  }
+  injectStylesLocal(doc);
 
   // 预先获取试卷题目进行缓存
   if (context.token && context.folderId && !context.existingQuestions) {
@@ -695,49 +606,7 @@ export const initXXTChapterParser = async (context = {}) => {
   }
 
   // 确保在最终找到题目的 doc 中注入样式
-  if (!doc.getElementById(styleId)) {
-      const style = doc.createElement('style');
-      style.id = styleId;
-      style.textContent = `
-        .zerror-xxt-parser-marker {
-          display: inline-block;
-          margin-left: 10px;
-          padding: 2px 6px;
-          background-color: #e0f2fe;
-          color: #0284c7;
-          border-radius: 4px;
-          font-size: 12px;
-          cursor: pointer;
-          border: 1px solid #bae6fd;
-          position: relative;
-          z-index: 999;
-        }
-        .zerror-xxt-parser-marker:hover {
-          background-color: #bae6fd;
-        }
-        .zerror-xxt-parser-panel {
-          margin-top: 10px;
-          padding: 15px;
-          background-color: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          font-size: 14px;
-          color: #334155;
-          animation: fadeIn 0.3s ease;
-          clear: both;
-        }
-        .zerror-xxt-parser-item { margin-bottom: 8px; }
-        .zerror-xxt-parser-label { font-weight: 600; color: #64748b; margin-right: 5px; }
-        .zerror-xxt-parser-answer { color: #16a34a; font-weight: bold; }
-        .zerror-xxt-parser-btn {
-            display: inline-block; margin-left: 10px; padding: 2px 8px;
-            background-color: #3b82f6; color: #fff; border-radius: 4px;
-            font-size: 12px; cursor: pointer; border: none;
-        }
-        .zerror-xxt-parser-btn:disabled { background-color: #94a3b8; }
-      `;
-      doc.head.appendChild(style);
-  }
+  injectStylesLocal(doc);
 
   let count = 0;
   const parsedQuestions = [];
